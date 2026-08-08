@@ -1,0 +1,60 @@
+{
+  "name": "vitepress-plugin-open-in-editor",
+  "version": "0.1.0",
+  "description": "Hover any paragraph in a VitePress site and jump straight to the source line in your local editor. Works with VS Code Remote SSH.",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --format=esm --platform=node --packages=external --outfile=dist/index.mjs",
+    "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist --noEmit false",
+    "dev": "npm run build -- --watch",
+    "prepublishOnly": "npm run build && npm run build:types",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "vitepress",
+    "vite-plugin",
+    "vscode",
+    "open-in-editor",
+    "click-to-source",
+    "markdown-it",
+    "remote-ssh"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOUR_USERNAME/vitepress-plugin-open-in-editor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YOUR_USERNAME/vitepress-plugin-open-in-editor/issues"
+  },
+  "homepage": "https://github.com/YOUR_USERNAME/vitepress-plugin-open-in-editor#readme",
+  "peerDependencies": {
+    "vite": ">=4",
+    "vitepress": ">=1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0",
+    "vite": "^8.2.1",
+    "vitepress": "^1.6.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

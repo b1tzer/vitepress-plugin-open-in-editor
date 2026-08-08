@@ -1,0 +1,36 @@
+# dependencies (lock files are committed for libraries)
+node_modules
+
+# build output
+dist
+
+# npm pack output
+*.tgz
+
+# logs
+*.log
+npm-debug.log*
+
+# coverage
+coverage
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# env
+.env
+.env.local
+.env.*.local
+
+# misc
+.cache
+*.tsbuildinfo
+
