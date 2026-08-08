@@ -23,6 +23,14 @@ npm i -D vitepress-plugin-open-in-editor
 npm i -D file:./packages/vitepress-plugin-open-in-editor
 ```
 
+## Prerequisites
+
+- **Node.js** >= 18
+- **Vite** >= 4
+- **VitePress** >= 1
+
+`vite` and `vitepress` are peer dependencies — they must be installed in your project. If you already have a VitePress site, you're all set.
+
 ## Usage
 
 ```ts
@@ -62,6 +70,14 @@ export default defineConfig({
   },
 })
 ```
+
+`openInEditor()` returns an object with three members you plug into VitePress config:
+
+| Member             | Type                                                             | Where to use                      |
+|--------------------|------------------------------------------------------------------|-----------------------------------|
+| `ed.markdown(md)`  | `(md: markdownit) => void`                                       | `markdown.config` — injects `data-src-line` attributes          |
+| `ed.vite()`         | `() => vite.Plugin`                                              | `vite.plugins` — registers `/__open-editor` middleware & client  |
+| `ed.editLinkPattern` | `string`                                                       | `themeConfig.editLink.pattern` — rewrites editLink to open locally |
 
 ## How it works
 
