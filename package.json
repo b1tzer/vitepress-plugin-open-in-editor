@@ -33,7 +33,7 @@
     "markdown-it",
     "remote-ssh"
   ],
-  "author": "",
+"author": "b1tzer <bltzer@outlook.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
