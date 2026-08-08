@@ -37,12 +37,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_USERNAME/vitepress-plugin-open-in-editor.git"
+    "url": "git+https://github.com/b1tzer/vitepress-plugin-open-in-editor.git"
   },
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/vitepress-plugin-open-in-editor/issues"
+    "url": "https://github.com/b1tzer/vitepress-plugin-open-in-editor/issues"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/vitepress-plugin-open-in-editor#readme",
+  "homepage": "https://github.com/b1tzer/vitepress-plugin-open-in-editor#readme",
   "peerDependencies": {
     "vite": ">=4",
     "vitepress": ">=1"
