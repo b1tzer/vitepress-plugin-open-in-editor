@@ -6,8 +6,8 @@
  * 客户端脚本据此挂浮动按钮。
  *
  * 为什么改写 renderToken 而不是 core rule：
- *   - core rule 拿到的是 token 数组，操作 attr 方便，但每次 md.parse 都要遍历
- *   - 改写 renderToken 只在真正渲染标签的那一刻注入，开销与原本渲染完全一致
+ *   - core rule 在 parse 阶段遍历所有 token 注入属性，renderToken 在渲染阶段逐 token 判断
+ *   - 二者遍历成本相当；renderToken 的真正优势是惰性注入、无需单独注册 rule
  */
 
 import type MarkdownIt from 'markdown-it'
@@ -20,11 +20,11 @@ export function injectSourceLine(md: MarkdownIt): void {
     const token = tokens[idx]
     // 只处理开标签（nesting === 1）且带源码行号映射（map）的块级元素。
     if (token.nesting === 1 && token.map && token.tag) {
-      token.attrJoin('data-src-line', String(token.map[0] + 1))
+      token.attrSet('data-src-line', String(token.map[0] + 1))
       // 注入真实源文件相对路径（相对 srcDir）。VitePress 渲染时通过 env 传入
       // relativePath；在 rewrites 场景下它比 URL 反推更可靠，供 hover 按钮优先使用。
       const rel = (env as { relativePath?: string } | undefined)?.relativePath
-      if (rel) token.attrJoin('data-src-file', rel)
+      if (rel) token.attrSet('data-src-file', rel)
     }
     return original(tokens, idx, options, env, self)
   }) as any
