@@ -2,8 +2,10 @@ import type { Plugin, ResolvedConfig } from 'vite'
 import { registerOpenEditorMiddleware } from './server'
 import { injectSourceLine } from './markdown'
 import { buildClientScript, buildStyle } from './client'
+import type { EditorId } from './launcher'
+import type MarkdownIt from 'markdown-it'
 
-export type { EditorId } from './launcher'
+export type { EditorId }
 
 export interface OpenInEditorOptions {
   /**
@@ -19,8 +21,12 @@ export interface OpenInEditorOptions {
    */
   base?: string
 
-  /** 编辑器 id。未设置时按 LAUNCH_EDITOR → VISUAL → EDITOR → 'code' 的顺序解析。 */
-  editor?: string
+  /**
+   * 编辑器 id。未设置时按以下级联链自动探测：
+   *   显式 editor → LAUNCH_EDITOR → 终端环境识别（VS Code / JetBrains / Remote SSH）
+   *   → 运行进程探测（轻量编辑器优先）→ VISUAL → EDITOR → 'code'
+   */
+  editor?: EditorId
 
   /** VS Code 系列是否复用同一窗口，默认 true。 */
   reuseWindow?: boolean
@@ -38,12 +44,15 @@ export interface OpenInEditorOptions {
    * editLink.pattern 使用的假外链协议头，默认 'http://__vscode__/'。
    * 作用是骗过 VitePress 的内部路由把 pattern 视为外链、原样输出 href，
    * 客户端脚本再拦截该 href 转为 fetch 请求。
-   * 一般不需要改。
+   * 必须以 '/' 结尾（未结尾会自动补全）。一般不需要改。
    */
   markerProtocol?: string
 }
 
 const DEFAULT_ENDPOINT = '/__open-editor'
+// 「假外链」前缀：用不存在的 http 链接骗过 VitePress 内部路由，让 editLink 的
+// href 被当作外链原样输出，客户端脚本再拦截该 href 转为 fetch 请求。
+// 必须以 '/' 结尾 —— 客户端靠 slice(prefix.length) 剥回相对路径。
 const DEFAULT_MARKER = 'http://__vscode__/'
 const DEFAULT_BUTTON_TEXT = '编辑此行'
 
@@ -78,7 +87,10 @@ export function openInEditor(options: OpenInEditorOptions) {
     throw new Error('[open-in-editor] `docsDir` is required (absolute path).')
   }
 
-  const clientCfg = { base, endpoint, markerProtocol, buttonText, hover }
+  // 归一化 markerProtocol：必须以 '/' 结尾，否则客户端 slice 会多出前导斜杠导致路径错误。
+  const marker = markerProtocol.endsWith('/') ? markerProtocol : `${markerProtocol}/`
+
+  const clientCfg = { base, endpoint, markerProtocol: marker, buttonText, hover }
 
   return {
     /**
@@ -86,7 +98,7 @@ export function openInEditor(options: OpenInEditorOptions) {
      * 之所以要求用户手动填而不是自动注入，是因为 CI 环境常需要切换成 GitHub 编辑链接，
      * 保留手动组装的灵活性。
      */
-    editLinkPattern: `${markerProtocol}:path` as const,
+    editLinkPattern: `${marker}:path` as const,
 
     /**
      * markdown-it 插件。在 VitePress 的 markdown.config 中调用一次：
@@ -153,6 +165,67 @@ export function openInEditor(options: OpenInEditorOptions) {
       }
     },
   }
+}
+
+/**
+ * 一行式 wrapper 入口：包装一份 VitePress 配置，自动注入 markdown / vite / editLink。
+ *
+ * 与 `openInEditor` 三件套完全等价，但把三处接线收拢成一次调用，适合绝大多数场景：
+ *
+ * ```ts
+ * import { withOpenInEditor } from 'vitepress-plugin-open-in-editor'
+ *
+ * export default withOpenInEditor(
+ *   defineConfig({
+ *     // ...原有配置，完全不动
+ *   }),
+ *   { docsDir: resolve(dirname(fileURLToPath(import.meta.url)), '..') },
+ * )
+ * ```
+ *
+ * 注入规则（均为「安全合并」，不覆盖用户已有配置）：
+ *   1. `markdown.config`：先执行用户原有 config，再执行 `injectSourceLine`
+ *   2. `vite.plugins`：在现有插件列表末尾追加 `ed.vite()`
+ *   3. `themeConfig.editLink.pattern`：仅在用户未设置时注入 `ed.editLinkPattern`，
+ *      已存在的 `editLink.text` 原样保留
+ */
+export function withOpenInEditor<T>(
+  config: T,
+  options: OpenInEditorOptions,
+): T {
+  const ed = openInEditor(options)
+  const next: Record<string, unknown> = { ...(config as Record<string, unknown>) }
+
+  // 1. markdown.config 安全合并
+  const prevMarkdown = next.markdown as { config?: (md: MarkdownIt) => void } | undefined
+  const prevMarkdownConfig = prevMarkdown?.config
+  next.markdown = {
+    ...prevMarkdown,
+    config(md: MarkdownIt) {
+      prevMarkdownConfig?.(md)
+      ed.markdown(md)
+    },
+  }
+
+  // 2. vite.plugins 追加
+  const prevVite = (next.vite as { plugins?: unknown[] } | undefined) ?? {}
+  const prevPlugins = Array.isArray(prevVite.plugins) ? prevVite.plugins : []
+  next.vite = {
+    ...prevVite,
+    plugins: [...prevPlugins, ed.vite()],
+  }
+
+  // 3. themeConfig.editLink.pattern 注入（不覆盖已有 pattern / text）
+  const themeConfig = (next.themeConfig as Record<string, unknown> | undefined) ?? {}
+  const editLink = themeConfig.editLink as { pattern?: string } | undefined
+  if (!editLink) {
+    themeConfig.editLink = { pattern: ed.editLinkPattern }
+  } else if (!editLink.pattern) {
+    themeConfig.editLink = { ...editLink, pattern: ed.editLinkPattern }
+  }
+  next.themeConfig = themeConfig
+
+  return next as T
 }
 
 export default openInEditor

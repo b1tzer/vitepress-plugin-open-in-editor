@@ -1,15 +1,15 @@
 import type { Connect, ViteDevServer } from 'vite'
 import { execFile } from 'node:child_process'
 import { resolve, sep } from 'node:path'
-import { getEditorSpec, resolveEditor, type EditorId } from './launcher'
+import { getEditorSpec, resolveEditor, type EditorId, type EditorSpec } from './launcher'
 
 export interface ServerMiddlewareOptions {
   /** 允许打开的文件根目录（绝对路径）。任何逃出该目录的路径都会被拒绝。 */
   docsDir: string
   /** 中间件挂载路径，默认 /__open-editor */
   endpoint: string
-  /** 编辑器 id，或空字符串走环境变量 */
-  editor?: string
+  /** 编辑器 id；省略时自动探测 */
+  editor?: EditorId
   /** VS Code 系列是否复用同一窗口 */
   reuseWindow: boolean
 }
@@ -31,8 +31,19 @@ export function registerOpenEditorMiddleware(
   options: ServerMiddlewareOptions,
 ): void {
   const { docsDir, endpoint, reuseWindow } = options
-  const editorId: EditorId = resolveEditor(options.editor)
-  const spec = getEditorSpec(editorId)
+
+  // 延迟解析编辑器：把 spawnSync 的进程探测推迟到首次请求，避免阻塞 dev server 启动。
+  // 显式传入 editor 时 resolveEditor 直接返回、无探测开销；未传时才在此处惰性探测。
+  let editorId: EditorId | null = null
+  let spec: EditorSpec | null = null
+
+  const ensureSpec = (): EditorSpec => {
+    if (!spec) {
+      editorId = resolveEditor(options.editor)
+      spec = getEditorSpec(editorId)
+    }
+    return spec
+  }
 
   const handler: Connect.NextHandleFunction = (req, res, next) => {
     if (!req.url) return next()
@@ -41,7 +52,9 @@ export function registerOpenEditorMiddleware(
     const pathname = qIdx >= 0 ? req.url.slice(0, qIdx) : req.url
     if (pathname !== endpoint) return next()
 
-    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`)
+    const hostHeader = req.headers.host
+    const host = (Array.isArray(hostHeader) ? hostHeader[0] : hostHeader) || 'localhost'
+    const url = new URL(req.url, `http://${host}`)
     const file = url.searchParams.get('file')
     const lineRaw = url.searchParams.get('line')
 
@@ -66,12 +79,13 @@ export function registerOpenEditorMiddleware(
     }
 
     const line = lineRaw && /^\d+$/.test(lineRaw) ? parseInt(lineRaw, 10) : 0
-    const args = spec.buildArgs(fullPath, line, { reuseWindow })
+    const s = ensureSpec()
+    const args = s.buildArgs(fullPath, line, { reuseWindow })
 
-    execFile(spec.cmd, args, (error, _stdout, stderr) => {
+    execFile(s.cmd, args, (error, _stdout, stderr) => {
       if (error) {
         const msg = stderr?.trim() || error.message
-        console.error(`[open-in-editor] ${spec.cmd} failed: ${msg}`)
+        console.error(`[open-in-editor] ${s.cmd} failed: ${msg}`)
         return json(500, { ok: false, error: msg, path: fullPath })
       }
       json(200, { ok: true, editor: editorId, path: fullPath, line })
