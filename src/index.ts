@@ -1,6 +1,6 @@
 import type { Plugin, ResolvedConfig } from 'vite'
 import type { UserConfig } from 'vitepress'
-import { resolve } from 'node:path'
+import { isAbsolute } from 'node:path'
 import { registerOpenEditorMiddleware } from './server'
 import { injectSourceLine } from './markdown'
 import { buildClientScript, buildStyle } from './client'
@@ -11,11 +11,16 @@ export type { EditorId }
 
 export interface OpenInEditorOptions {
   /**
-   * 源文件目录。相对路径相对 VitePress root（`.vitepress` 的上一级，自动从 dev server 推导），
-   * 绝对路径则直接使用（可手动覆盖）。可选，缺省为 '.'。
+   * 源文件目录覆盖项，可选，缺省为 '.'。
    *
-   * 一行式用法（withOpenInEditor）会自动从 config.srcDir 透传，通常无需手动设置；
-   * 三件套用法（openInEditor）默认 '.'（即源文件就在 root 下）。
+   * VitePress 在 dev 阶段会把 Vite 的 root 直接设为「解析后的源目录」（config.srcDir 的结果），
+   * 即 server.config.root 本身就是源目录。因此：
+   *   - 相对路径（含缺省 '.'）一律忽略，直接使用 server.config.root，避免对已是源目录的 root
+   *     再次偏移导致重复拼接（如 srcDir='./docs' 被拼成 docs/docs）；
+   *   - 仅绝对路径会被原样采用，用于强制覆盖源目录。
+   *
+   * 一行式用法（withOpenInEditor）会自动从 config.srcDir 透传（相对路径会被忽略、直接使用
+   * server.config.root），通常无需手动设置；三件套用法（openInEditor）默认 '.'。
    */
   srcDir?: string
 
@@ -96,8 +101,10 @@ export function openInEditor(options: OpenInEditorOptions) {
 
   // 最终源文件目录需等到 configureServer 阶段才能确定（依赖 server.config.root），
   // 这里只保存推导函数，避免在配置阶段过早求值。
-  // path.resolve(root, srcDir) 在 srcDir 为绝对路径时会直接返回 srcDir，天然支持手动覆盖。
-  const resolveSourceDir = (root: string): string => resolve(root, srcDir)
+  // VitePress 已把 server.config.root 设为「解析后的源目录」，root 本身就是源目录：
+  //   - 相对路径（含缺省 '.'）一律忽略，直接返回 root，避免对源目录再次偏移（如 './docs' 被拼成 'docs/docs'）；
+  //   - 仅绝对路径保留「强制覆盖源目录」能力，原样返回 srcDir。
+  const resolveSourceDir = (root: string): string => (isAbsolute(srcDir) ? srcDir : root)
 
   const clientCfg = { base, endpoint, markerProtocol: marker, buttonText, hover }
 
@@ -181,15 +188,15 @@ export function openInEditor(options: OpenInEditorOptions) {
  * 一行式 wrapper 入口：包装一份 VitePress 配置，自动注入 markdown / vite / editLink。
  *
  * 与 `openInEditor` 三件套基本等价，但把三处接线收拢成一次调用，适合绝大多数场景。
- * 额外提供 **srcDir 自动对齐 + 零配置**：root 自动取 dev server，插件读取 config.srcDir
- * 叠加得到真正的源文件目录，无需用户手动保持一致。
+ * 额外提供 **srcDir 自动对齐 + 零配置**：root 自动取 dev server（VitePress 已将其设为
+ * 解析后的源目录），插件直接使用 server.config.root，无需用户手动保持一致。
  *
  * ```ts
  * import { withOpenInEditor } from 'vitepress-plugin-open-in-editor'
  *
  * export default withOpenInEditor(
  *   defineConfig({
- *     srcDir: './docs', // 插件会自动对齐它，源目录 = resolve(root, './docs')
+ *     srcDir: './docs', // 插件自动使用 server.config.root（已是解析后的源目录），无需再叠加 srcDir
  *     // ...原有配置，完全不动
  *   }),
  *   // 第二个参数可整体省略；如需要可传 base / editor / hover 等选项
@@ -206,8 +213,9 @@ export function withOpenInEditor(
   config: UserConfig,
   options: OpenInEditorOptions = {},
 ): UserConfig {
-  // 自动对齐 VitePress 的 srcDir：把 config.srcDir 透传给 openInEditor，
-  // 最终源目录 = resolve(root, srcDir)，在 configureServer 阶段求值。
+  // 自动对齐 VitePress 的 srcDir：把 config.srcDir 透传给 openInEditor。
+  // 相对路径（如 './docs'）会在 resolveSourceDir 中被忽略、直接使用 server.config.root，
+  // 仅当显式传入绝对路径时才用于强制覆盖源目录。
   const ed = openInEditor({ ...options, srcDir: options.srcDir ?? config.srcDir ?? '.' })
 
   // 1. markdown.config 安全合并
