@@ -1,31 +1,20 @@
 {
-  "name": "vitepress-plugin-open-in-editor",
+  "name": "vitepress-plugin-open-in-editor-monorepo",
   "version": "0.1.2",
-  "description": "Hover any paragraph, code block, table or list in a VitePress site and jump straight to the exact source line in your local editor. Works with VS Code Remote SSH and 20+ editors.",
+  "description": "Monorepo for vitepress-plugin-open-in-editor and its framework-agnostic editor-detection core.",
+  "private": true,
   "type": "module",
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --format=esm --platform=node --packages=external --outfile=dist/index.mjs",
-    "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist --noEmit false",
-    "dev": "npm run build -- --watch",
+    "build": "npm run build -w open-in-editor-core && npm run build -w vitepress-plugin-open-in-editor",
+    "build:types": "npm run build:types -w open-in-editor-core && npm run build:types -w vitepress-plugin-open-in-editor",
+    "dev": "npm run build -w vitepress-plugin-open-in-editor -- --watch",
     "demo:dev": "vitepress dev docs",
     "demo:build": "vitepress build docs",
     "demo:preview": "vitepress preview docs",
-    "prepublishOnly": "npm run build && npm run build:types",
-    "prepare": "npm run build"
+    "prepublishOnly": "npm run build && npm run build:types"
   },
   "keywords": [
     "vitepress",
@@ -36,7 +25,7 @@
     "markdown-it",
     "remote-ssh"
   ],
-"author": "b1tzer <bltzer@outlook.com>",
+  "author": "b1tzer <bltzer@outlook.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -46,10 +35,6 @@
     "url": "https://github.com/b1tzer/vitepress-plugin-open-in-editor/issues"
   },
   "homepage": "https://github.com/b1tzer/vitepress-plugin-open-in-editor#readme",
-  "peerDependencies": {
-    "vite": ">=4",
-    "vitepress": ">=1"
-  },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^26.2.0",

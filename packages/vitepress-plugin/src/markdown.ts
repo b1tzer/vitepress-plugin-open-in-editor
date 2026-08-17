@@ -13,8 +13,10 @@
 import type MarkdownIt from 'markdown-it'
 
 export function injectSourceLine(md: MarkdownIt): void {
-  const original = md.renderer.renderToken.bind(md.renderer)
-  md.renderer.renderToken = (tokens, idx, options, env, self) => {
+  // @types/markdown-it 的 renderToken 类型仅声明 3 个参数，但 markdown-it 运行时
+  // 实际传入 5 个（含 env/self）。用 any 绕过该类型不完整，保持与官方运行时行为一致。
+  const original = md.renderer.renderToken.bind(md.renderer) as any
+  md.renderer.renderToken = ((tokens: any, idx: any, options: any, env: any, self: any) => {
     const token = tokens[idx]
     // 只处理开标签（nesting === 1）且带源码行号映射（map）的块级元素。
     if (token.nesting === 1 && token.map && token.tag) {
@@ -25,5 +27,5 @@ export function injectSourceLine(md: MarkdownIt): void {
       if (rel) token.attrJoin('data-src-file', rel)
     }
     return original(tokens, idx, options, env, self)
-  }
+  }) as any
 }

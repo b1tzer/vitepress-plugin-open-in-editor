@@ -2,7 +2,8 @@ import type { Connect, ViteDevServer } from 'vite'
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
-import { getEditorSpec, resolveEditor, type EditorId, type EditorSpec } from './launcher'
+import { getEditorSpec, resolveEditor } from 'open-in-editor-core'
+import type { EditorId, EditorSpec } from 'open-in-editor-core'
 
 export interface ServerMiddlewareOptions {
   /** 允许打开的源文件目录（绝对路径）。任何逃出该目录的路径都会被拒绝。 */
