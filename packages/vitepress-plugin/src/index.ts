@@ -49,15 +49,18 @@ export interface OpenInEditorOptions {
    * 作用是骗过 VitePress 的内部路由把 pattern 视为外链、原样输出 href，
    * 客户端脚本再拦截该 href 转为 fetch 请求。
    * 必须以 '/' 结尾（未结尾会自动补全）。一般不需要改。
+   *
+   * 注意：该协议头与 VS Code 无关，仅借用不存在的 http host（__vscode__）
+   * 来绕过 SPA 路由；名字中的 marker 表示「占位标记」，而非 vscode 协议。
    */
   markerProtocol?: string
 }
 
-const DEFAULT_ENDPOINT = '/__open-editor'
+const DEFAULT_MARKER = 'http://__vscode__/'
 // 「假外链」前缀：用不存在的 http 链接骗过 VitePress 内部路由，让 editLink 的
 // href 被当作外链原样输出，客户端脚本再拦截该 href 转为 fetch 请求。
 // 必须以 '/' 结尾 —— 客户端靠 slice(prefix.length) 剥回相对路径。
-const DEFAULT_MARKER = 'http://__vscode__/'
+// 注意：__vscode__ 只是占位 host，与 VS Code 无关。const DEFAULT_MARKER = 'http://__vscode__/'
 const DEFAULT_BUTTON_TEXT = '编辑此行'
 
 /**
