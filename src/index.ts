@@ -1,4 +1,5 @@
 import type { Plugin, ResolvedConfig } from 'vite'
+import { resolve } from 'node:path'
 import { registerOpenEditorMiddleware } from './server'
 import { injectSourceLine } from './markdown'
 import { buildClientScript, buildStyle } from './client'
@@ -9,11 +10,13 @@ export type { EditorId }
 
 export interface OpenInEditorOptions {
   /**
-   * 文档根目录的绝对路径。所有可打开的文件必须落在该目录下。
-   * 强烈建议使用 `resolve(dirname(fileURLToPath(import.meta.url)), '..')` 动态推导，
-   * 避免硬编码导致的跨机器/跨环境失效。
+   * 源文件目录。相对路径相对 VitePress root（`.vitepress` 的上一级，自动从 dev server 推导），
+   * 绝对路径则直接使用（可手动覆盖）。可选，缺省为 '.'。
+   *
+   * 一行式用法（withOpenInEditor）会自动从 config.srcDir 透传，通常无需手动设置；
+   * 三件套用法（openInEditor）默认 '.'（即源文件就在 root 下）。
    */
-  docsDir: string
+  srcDir?: string
 
   /**
    * 站点 base（与 VitePress 的 config.base 保持一致）。用于客户端反推当前页对应的 .md 路径。
@@ -60,7 +63,7 @@ const DEFAULT_BUTTON_TEXT = '编辑此行'
  * 主入口：一次调用返回三块能力。
  *
  * ```ts
- * const ed = openInEditor({ docsDir: resolve(__dirname, '..') })
+ * const ed = openInEditor({}) // srcDir 可省略，root 自动从 dev server 推导
  *
  * export default defineConfig({
  *   markdown: { config: (md) => ed.markdown(md) },
@@ -73,7 +76,7 @@ const DEFAULT_BUTTON_TEXT = '编辑此行'
  */
 export function openInEditor(options: OpenInEditorOptions) {
   const {
-    docsDir,
+    srcDir = '.',
     base = '/',
     editor,
     reuseWindow = true,
@@ -83,12 +86,13 @@ export function openInEditor(options: OpenInEditorOptions) {
     markerProtocol = DEFAULT_MARKER,
   } = options
 
-  if (!docsDir) {
-    throw new Error('[open-in-editor] `docsDir` is required (absolute path).')
-  }
-
   // 归一化 markerProtocol：必须以 '/' 结尾，否则客户端 slice 会多出前导斜杠导致路径错误。
   const marker = markerProtocol.endsWith('/') ? markerProtocol : `${markerProtocol}/`
+
+  // 最终源文件目录需等到 configureServer 阶段才能确定（依赖 server.config.root），
+  // 这里只保存推导函数，避免在配置阶段过早求值。
+  // path.resolve(root, srcDir) 在 srcDir 为绝对路径时会直接返回 srcDir，天然支持手动覆盖。
+  const resolveSourceDir = (root: string): string => resolve(root, srcDir)
 
   const clientCfg = { base, endpoint, markerProtocol: marker, buttonText, hover }
 
@@ -124,16 +128,17 @@ export function openInEditor(options: OpenInEditorOptions) {
         },
 
         configureServer(server) {
+          const finalSourceDir = resolveSourceDir(server.config.root)
           registerOpenEditorMiddleware(server, {
-            docsDir,
+            sourceDir: finalSourceDir,
             endpoint,
             editor,
             reuseWindow,
           })
           server.config.logger.info(
             `\n  ➜  open-in-editor: hover paragraphs to jump into your editor` +
-              `\n     endpoint: ${endpoint}` +
-              `\n     docsDir : ${docsDir}\n`,
+              `\n     endpoint : ${endpoint}` +
+              `\n     sourceDir: ${finalSourceDir}\n`,
           )
         },
 
@@ -170,16 +175,19 @@ export function openInEditor(options: OpenInEditorOptions) {
 /**
  * 一行式 wrapper 入口：包装一份 VitePress 配置，自动注入 markdown / vite / editLink。
  *
- * 与 `openInEditor` 三件套完全等价，但把三处接线收拢成一次调用，适合绝大多数场景：
+ * 与 `openInEditor` 三件套基本等价，但把三处接线收拢成一次调用，适合绝大多数场景。
+ * 额外提供 **srcDir 自动对齐 + 零配置**：root 自动取 dev server，插件读取 config.srcDir
+ * 叠加得到真正的源文件目录，无需用户手动保持一致。
  *
  * ```ts
  * import { withOpenInEditor } from 'vitepress-plugin-open-in-editor'
  *
  * export default withOpenInEditor(
  *   defineConfig({
+ *     srcDir: './docs', // 插件会自动对齐它，源目录 = resolve(root, './docs')
  *     // ...原有配置，完全不动
  *   }),
- *   { docsDir: resolve(dirname(fileURLToPath(import.meta.url)), '..') },
+ *   // 第二个参数可整体省略；如需要可传 base / editor / hover 等选项
  * )
  * ```
  *
@@ -191,9 +199,12 @@ export function openInEditor(options: OpenInEditorOptions) {
  */
 export function withOpenInEditor<T>(
   config: T,
-  options: OpenInEditorOptions,
+  options: OpenInEditorOptions = {},
 ): T {
-  const ed = openInEditor(options)
+  // 自动对齐 VitePress 的 srcDir：把 config.srcDir 透传给 openInEditor，
+  // 最终源目录 = resolve(root, srcDir)，在 configureServer 阶段求值。
+  const cfg = config as { srcDir?: string }
+  const ed = openInEditor({ ...options, srcDir: options.srcDir ?? cfg.srcDir ?? '.' })
   const next: Record<string, unknown> = { ...(config as Record<string, unknown>) }
 
   // 1. markdown.config 安全合并

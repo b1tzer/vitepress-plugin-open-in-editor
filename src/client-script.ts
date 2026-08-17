@@ -65,7 +65,8 @@ export default `(function() {
       e.stopPropagation();
       if (!currentTarget) return;
       var line = parseInt(currentTarget.getAttribute('data-src-line') || '0', 10);
-      openInEditor(getSourceFile(), line);
+      var file = currentTarget.getAttribute('data-src-file') || getSourceFile();
+      openInEditor(file, line);
     });
     document.body.appendChild(btn);
     return btn;

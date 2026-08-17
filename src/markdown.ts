@@ -14,12 +14,16 @@ import type MarkdownIt from 'markdown-it'
 
 export function injectSourceLine(md: MarkdownIt): void {
   const original = md.renderer.renderToken.bind(md.renderer)
-  md.renderer.renderToken = (tokens, idx, options) => {
+  md.renderer.renderToken = (tokens, idx, options, env, self) => {
     const token = tokens[idx]
     // 只处理开标签（nesting === 1）且带源码行号映射（map）的块级元素。
     if (token.nesting === 1 && token.map && token.tag) {
       token.attrJoin('data-src-line', String(token.map[0] + 1))
+      // 注入真实源文件相对路径（相对 srcDir）。VitePress 渲染时通过 env 传入
+      // relativePath；在 rewrites 场景下它比 URL 反推更可靠，供 hover 按钮优先使用。
+      const rel = (env as { relativePath?: string } | undefined)?.relativePath
+      if (rel) token.attrJoin('data-src-file', rel)
     }
-    return original(tokens, idx, options)
+    return original(tokens, idx, options, env, self)
   }
 }
