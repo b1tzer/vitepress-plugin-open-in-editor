@@ -50,13 +50,8 @@ export function registerOpenEditorMiddleware(
   const handler: Connect.NextHandleFunction = (req, res, next) => {
     if (!req.url) return next()
 
-    const qIdx = req.url.indexOf('?')
-    const pathname = qIdx >= 0 ? req.url.slice(0, qIdx) : req.url
-    if (pathname !== endpoint) return next()
-
-    const hostHeader = req.headers.host
-    const host = (Array.isArray(hostHeader) ? hostHeader[0] : hostHeader) || 'localhost'
-    const url = new URL(req.url, `http://${host}`)
+    const url = new URL(req.url, 'http://localhost')
+    if (url.pathname !== endpoint) return next()
     const file = url.searchParams.get('file')
     const lineRaw = url.searchParams.get('line')
 
