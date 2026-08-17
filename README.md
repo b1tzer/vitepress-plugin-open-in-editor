@@ -38,23 +38,18 @@ npm i -D file:./packages/vitepress-plugin-open-in-editor
 ```ts
 // docs/.vitepress/config.mts
 import { defineConfig } from 'vitepress'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { withOpenInEditor } from 'vitepress-plugin-open-in-editor'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default withOpenInEditor(
   defineConfig({
     base: '/my-site/', // must match VitePress `base`
+    srcDir: './docs',  // optional: the plugin aligns with it automatically
     // ...your existing config, unchanged
   }),
-  {
-    docsDir: resolve(__dirname, '..'),
-    // editor: 'cursor',        // optional; falls back to $LAUNCH_EDITOR / 'code'
-    // hover: true,             // enable/disable the floating button
-    // buttonText: '编辑此行',
-  },
+  // The second argument is optional. The plugin auto-detects the VitePress root
+  // (the parent of `.vitepress`) from the dev server, and resolves the real
+  // source dir via `resolve(root, srcDir)` — no manual path to keep in sync.
+  // { editor: 'cursor', hover: true, buttonText: '编辑此行' },
 )
 ```
 
@@ -65,18 +60,13 @@ The wrapper above is just sugar for the manual three-piece wiring below. Use thi
 ```ts
 // docs/.vitepress/config.mts
 import { defineConfig } from 'vitepress'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { openInEditor } from 'vitepress-plugin-open-in-editor'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const docsDir = resolve(__dirname, '..')
-
 const ed = openInEditor({
-  docsDir,
   base: '/my-site/', // must match VitePress `base`
-  // editor: 'cursor',        // optional; falls back to $LAUNCH_EDITOR / 'code'
-  // hover: true,             // enable/disable the floating button
+  // srcDir: './docs',                  // optional: defaults to '.'; relative to root, or absolute
+  // editor: 'cursor',                  // optional; falls back to $LAUNCH_EDITOR / 'code'
+  // hover: true,                       // enable/disable the floating button
   // buttonText: '编辑此行',
 })
 
@@ -127,7 +117,7 @@ export default defineConfig({
 │                                                                  │
 │  /__open-editor middleware                                       │
 │      │                                                           │
-│      ├─ resolve & validate path (must be inside docsDir)         │
+│      ├─ resolve & validate path (must be inside sourceDir)       │
 │      └─ execFile('code', ['--reuse-window', '--goto',            │
 │                            '/abs/path/to/xxx.md:42'])            │
 └──────────────────────┬───────────────────────────────────────────┘
@@ -142,7 +132,7 @@ The `data-src-line` attribute is injected by a tiny markdown-it renderToken over
 
 | Option           | Type      | Default              | Description                                                                 |
 |------------------|-----------|----------------------|-----------------------------------------------------------------------------|
-| `docsDir`        | `string`  | *(required)*         | Absolute path of the doc root. Any file outside is rejected by the server.  |
+| `srcDir`         | `string`  | `'.'`                | Source dir. Relative to the VitePress root (auto-detected), or absolute to override. With `withOpenInEditor`, auto-read from `config.srcDir`. |
 | `base`           | `string`  | `'/'`                | Must match VitePress `config.base`. Used to reverse the current `.md` path. |
 | `editor`         | `string`  | *(auto-detected)*    | Explicit editor id (see list below). Overrides auto-detection.              |
 | `reuseWindow`    | `boolean` | `true`               | Pass `--reuse-window` to VS Code family.                                    |
