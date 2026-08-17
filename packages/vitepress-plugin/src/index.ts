@@ -56,11 +56,12 @@ export interface OpenInEditorOptions {
   markerProtocol?: string
 }
 
-const DEFAULT_MARKER = 'http://__vscode__/'
+const DEFAULT_ENDPOINT = '/__open-editor'
 // 「假外链」前缀：用不存在的 http 链接骗过 VitePress 内部路由，让 editLink 的
 // href 被当作外链原样输出，客户端脚本再拦截该 href 转为 fetch 请求。
 // 必须以 '/' 结尾 —— 客户端靠 slice(prefix.length) 剥回相对路径。
-// 注意：__vscode__ 只是占位 host，与 VS Code 无关。const DEFAULT_MARKER = 'http://__vscode__/'
+// 注意：__vscode__ 只是占位 host，与 VS Code 无关。
+const DEFAULT_MARKER = 'http://__vscode__/'
 const DEFAULT_BUTTON_TEXT = '编辑此行'
 
 /**
