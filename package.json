@@ -1,6 +1,6 @@
 {
   "name": "vitepress-plugin-open-in-editor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hover any paragraph in a VitePress site and jump straight to the source line in your local editor. Works with VS Code Remote SSH.",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -40,7 +40,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/b1tzer/vitepress-plugin-open-in-editor.git"
+    "url": "https://github.com/b1tzer/vitepress-plugin-open-in-editor"
   },
   "bugs": {
     "url": "https://github.com/b1tzer/vitepress-plugin-open-in-editor/issues"
