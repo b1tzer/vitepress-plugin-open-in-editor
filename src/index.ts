@@ -155,4 +155,65 @@ export function openInEditor(options: OpenInEditorOptions) {
   }
 }
 
+/**
+ * 一行式 wrapper 入口：包装一份 VitePress 配置，自动注入 markdown / vite / editLink。
+ *
+ * 与 `openInEditor` 三件套完全等价，但把三处接线收拢成一次调用，适合绝大多数场景：
+ *
+ * ```ts
+ * import { withOpenInEditor } from 'vitepress-plugin-open-in-editor'
+ *
+ * export default withOpenInEditor(
+ *   defineConfig({
+ *     // ...原有配置，完全不动
+ *   }),
+ *   { docsDir: resolve(dirname(fileURLToPath(import.meta.url)), '..') },
+ * )
+ * ```
+ *
+ * 注入规则（均为「安全合并」，不覆盖用户已有配置）：
+ *   1. `markdown.config`：先执行用户原有 config，再执行 `injectSourceLine`
+ *   2. `vite.plugins`：在现有插件列表末尾追加 `ed.vite()`
+ *   3. `themeConfig.editLink.pattern`：仅在用户未设置时注入 `ed.editLinkPattern`，
+ *      已存在的 `editLink.text` 原样保留
+ */
+export function withOpenInEditor<T>(
+  config: T,
+  options: OpenInEditorOptions,
+): T {
+  const ed = openInEditor(options)
+  const next: Record<string, unknown> = { ...(config as Record<string, unknown>) }
+
+  // 1. markdown.config 安全合并
+  const prevMarkdown = next.markdown as { config?: (md: unknown) => void } | undefined
+  const prevMarkdownConfig = prevMarkdown?.config
+  next.markdown = {
+    ...prevMarkdown,
+    config(md: unknown) {
+      if (typeof prevMarkdownConfig === 'function') prevMarkdownConfig(md)
+      ed.markdown(md as Parameters<typeof ed.markdown>[0])
+    },
+  }
+
+  // 2. vite.plugins 追加
+  const prevVite = (next.vite as { plugins?: unknown[] } | undefined) ?? {}
+  const prevPlugins = Array.isArray(prevVite.plugins) ? prevVite.plugins : []
+  next.vite = {
+    ...prevVite,
+    plugins: [...prevPlugins, ed.vite()],
+  }
+
+  // 3. themeConfig.editLink.pattern 注入（不覆盖已有 pattern / text）
+  const themeConfig = (next.themeConfig as Record<string, unknown> | undefined) ?? {}
+  const editLink = themeConfig.editLink as { pattern?: string } | undefined
+  if (!editLink) {
+    themeConfig.editLink = { pattern: ed.editLinkPattern }
+  } else if (!editLink.pattern) {
+    themeConfig.editLink = { ...editLink, pattern: ed.editLinkPattern }
+  }
+  next.themeConfig = themeConfig
+
+  return next as T
+}
+
 export default openInEditor

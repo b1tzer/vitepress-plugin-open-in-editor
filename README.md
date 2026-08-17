@@ -33,6 +33,35 @@ npm i -D file:./packages/vitepress-plugin-open-in-editor
 
 ## Usage
 
+### Recommended: one-line wrapper
+
+```ts
+// docs/.vitepress/config.mts
+import { defineConfig } from 'vitepress'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { withOpenInEditor } from 'vitepress-plugin-open-in-editor'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+export default withOpenInEditor(
+  defineConfig({
+    base: '/my-site/', // must match VitePress `base`
+    // ...your existing config, unchanged
+  }),
+  {
+    docsDir: resolve(__dirname, '..'),
+    // editor: 'cursor',        // optional; falls back to $LAUNCH_EDITOR / 'code'
+    // hover: true,             // enable/disable the floating button
+    // buttonText: '编辑此行',
+  },
+)
+```
+
+### Manual: full control
+
+The wrapper above is just sugar for the manual three-piece wiring below. Use this when you need fine-grained control (e.g. switching `editLink` to point at GitHub in CI):
+
 ```ts
 // docs/.vitepress/config.mts
 import { defineConfig } from 'vitepress'
