@@ -1,5 +1,4 @@
-export default `(function() {
-  var cfg = __OPEN_IN_EDITOR_CONFIG__;
+export default `(function(cfg) {
   var BASE = cfg.base;
   var ENDPOINT = cfg.endpoint;
   var MARKER = cfg.markerProtocol;
