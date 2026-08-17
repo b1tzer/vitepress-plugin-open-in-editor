@@ -43,9 +43,9 @@ export default withOpenInEditor(
     base: '/my-site/', // must match VitePress `base`
     // ...your existing config, unchanged
   }),
-  // The second argument is optional. The plugin auto-detects the VitePress root
-  // (the parent of `.vitepress`) from the dev server, and resolves the real
-  // source dir via `resolve(root, srcDir)` — no manual path to keep in sync.
+  // The second argument is optional. VitePress already sets the Vite dev server's
+  // `root` to the resolved source dir (the result of `config.srcDir`), so the plugin
+  // uses `server.config.root` directly — no manual path to keep in sync.
   // { editor: 'cursor', hover: true, buttonText: '编辑此行' },
 )
 ```
@@ -61,7 +61,7 @@ import { openInEditor } from 'vitepress-plugin-open-in-editor'
 
 const ed = openInEditor({
   base: '/my-site/', // must match VitePress `base`
-  // srcDir: './docs',                  // optional: defaults to '.'; relative to root, or absolute
+  // srcDir: './docs',                  // optional; relative values are ignored (root is already the source dir), only absolute overrides
   // editor: 'cursor',                  // optional; falls back to $LAUNCH_EDITOR / 'code'
   // hover: true,                       // enable/disable the floating button
   // buttonText: '编辑此行',
@@ -129,7 +129,7 @@ The `data-src-line` attribute is injected by a tiny markdown-it renderToken over
 
 | Option           | Type      | Default              | Description                                                                 |
 |------------------|-----------|----------------------|-----------------------------------------------------------------------------|
-| `srcDir`         | `string`  | `'.'`                | Source dir. Relative to the VitePress root (auto-detected), or absolute to override. With `withOpenInEditor`, auto-read from `config.srcDir`. |
+| `srcDir`         | `string`  | `'.'`                | Optional override. Relative values (incl. the default `'.'`) are ignored — the plugin uses `server.config.root`, which VitePress already resolves to the source dir. Only an absolute path forces an override. With `withOpenInEditor`, auto-read from `config.srcDir`. |
 | `base`           | `string`  | `'/'`                | Must match VitePress `config.base`. Used to reverse the current `.md` path. |
 | `editor`         | `string`  | *(auto-detected)*    | Explicit editor id (see list below). Overrides auto-detection.              |
 | `reuseWindow`    | `boolean` | `true`               | Pass `--reuse-window` to VS Code family.                                    |
