@@ -1,4 +1,5 @@
 import type { Plugin, ResolvedConfig } from 'vite'
+import type { UserConfig } from 'vitepress'
 import { resolve } from 'node:path'
 import { registerOpenEditorMiddleware } from './server'
 import { injectSourceLine } from './markdown'
@@ -48,6 +49,9 @@ export interface OpenInEditorOptions {
    * 作用是骗过 VitePress 的内部路由把 pattern 视为外链、原样输出 href，
    * 客户端脚本再拦截该 href 转为 fetch 请求。
    * 必须以 '/' 结尾（未结尾会自动补全）。一般不需要改。
+   *
+   * 注意：该协议头与 VS Code 无关，仅借用不存在的 http host（__vscode__）
+   * 来绕过 SPA 路由；名字中的 marker 表示「占位标记」，而非 vscode 协议。
    */
   markerProtocol?: string
 }
@@ -56,6 +60,7 @@ const DEFAULT_ENDPOINT = '/__open-editor'
 // 「假外链」前缀：用不存在的 http 链接骗过 VitePress 内部路由，让 editLink 的
 // href 被当作外链原样输出，客户端脚本再拦截该 href 转为 fetch 请求。
 // 必须以 '/' 结尾 —— 客户端靠 slice(prefix.length) 剥回相对路径。
+// 注意：__vscode__ 只是占位 host，与 VS Code 无关。
 const DEFAULT_MARKER = 'http://__vscode__/'
 const DEFAULT_BUTTON_TEXT = '编辑此行'
 
@@ -197,21 +202,18 @@ export function openInEditor(options: OpenInEditorOptions) {
  *   3. `themeConfig.editLink.pattern`：仅在用户未设置时注入 `ed.editLinkPattern`，
  *      已存在的 `editLink.text` 原样保留
  */
-export function withOpenInEditor<T>(
-  config: T,
+export function withOpenInEditor(
+  config: UserConfig,
   options: OpenInEditorOptions = {},
-): T {
+): UserConfig {
   // 自动对齐 VitePress 的 srcDir：把 config.srcDir 透传给 openInEditor，
   // 最终源目录 = resolve(root, srcDir)，在 configureServer 阶段求值。
-  const cfg = config as { srcDir?: string }
-  const ed = openInEditor({ ...options, srcDir: options.srcDir ?? cfg.srcDir ?? '.' })
-  const next: Record<string, unknown> = { ...(config as Record<string, unknown>) }
+  const ed = openInEditor({ ...options, srcDir: options.srcDir ?? config.srcDir ?? '.' })
 
   // 1. markdown.config 安全合并
-  const prevMarkdown = next.markdown as { config?: (md: MarkdownIt) => void } | undefined
-  const prevMarkdownConfig = prevMarkdown?.config
-  next.markdown = {
-    ...prevMarkdown,
+  const prevMarkdownConfig = config.markdown?.config
+  const markdown: UserConfig['markdown'] = {
+    ...config.markdown,
     config(md: MarkdownIt) {
       prevMarkdownConfig?.(md)
       ed.markdown(md)
@@ -219,24 +221,31 @@ export function withOpenInEditor<T>(
   }
 
   // 2. vite.plugins 追加
-  const prevVite = (next.vite as { plugins?: unknown[] } | undefined) ?? {}
+  // 注：vitepress 1.x 内置 vite@5，与项目根 vite@8 存在类型差异，
+  // 用断言绕过版本冲突（运行时 vite 由 vitepress 决定）。
+  const prevVite = config.vite ?? {}
   const prevPlugins = Array.isArray(prevVite.plugins) ? prevVite.plugins : []
-  next.vite = {
+  const vite = {
     ...prevVite,
     plugins: [...prevPlugins, ed.vite()],
-  }
+  } as UserConfig['vite']
 
   // 3. themeConfig.editLink.pattern 注入（不覆盖已有 pattern / text）
-  const themeConfig = (next.themeConfig as Record<string, unknown> | undefined) ?? {}
+  // themeConfig 泛型默认 any，此处仅对 editLink 做局部断言，属于 VitePress 类型边界。
+  const themeConfig = (config.themeConfig ?? {}) as Record<string, any>
   const editLink = themeConfig.editLink as { pattern?: string } | undefined
   if (!editLink) {
     themeConfig.editLink = { pattern: ed.editLinkPattern }
   } else if (!editLink.pattern) {
     themeConfig.editLink = { ...editLink, pattern: ed.editLinkPattern }
   }
-  next.themeConfig = themeConfig
 
-  return next as T
+  return {
+    ...config,
+    markdown,
+    vite,
+    themeConfig,
+  }
 }
 
 export default openInEditor

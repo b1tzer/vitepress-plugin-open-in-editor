@@ -2,7 +2,8 @@ import type { Connect, ViteDevServer } from 'vite'
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
-import { getEditorSpec, resolveEditor, type EditorId, type EditorSpec } from './launcher'
+import { getEditorSpec, resolveEditor } from './launcher'
+import type { EditorId, EditorSpec } from './launcher'
 
 export interface ServerMiddlewareOptions {
   /** 允许打开的源文件目录（绝对路径）。任何逃出该目录的路径都会被拒绝。 */
@@ -49,13 +50,8 @@ export function registerOpenEditorMiddleware(
   const handler: Connect.NextHandleFunction = (req, res, next) => {
     if (!req.url) return next()
 
-    const qIdx = req.url.indexOf('?')
-    const pathname = qIdx >= 0 ? req.url.slice(0, qIdx) : req.url
-    if (pathname !== endpoint) return next()
-
-    const hostHeader = req.headers.host
-    const host = (Array.isArray(hostHeader) ? hostHeader[0] : hostHeader) || 'localhost'
-    const url = new URL(req.url, `http://${host}`)
+    const url = new URL(req.url, 'http://localhost')
+    if (url.pathname !== endpoint) return next()
     const file = url.searchParams.get('file')
     const lineRaw = url.searchParams.get('line')
 

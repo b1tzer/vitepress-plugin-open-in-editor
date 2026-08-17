@@ -19,8 +19,6 @@ Zero-config for VS Code. Supports Cursor / Windsurf / WebStorm / IntelliJ IDEA /
 
 ```bash
 npm i -D vitepress-plugin-open-in-editor
-# or during local development in a monorepo:
-npm i -D file:./packages/vitepress-plugin-open-in-editor
 ```
 
 ## Prerequisites
@@ -43,7 +41,6 @@ import { withOpenInEditor } from 'vitepress-plugin-open-in-editor'
 export default withOpenInEditor(
   defineConfig({
     base: '/my-site/', // must match VitePress `base`
-    srcDir: './docs',  // optional: the plugin aligns with it automatically
     // ...your existing config, unchanged
   }),
   // The second argument is optional. The plugin auto-detects the VitePress root

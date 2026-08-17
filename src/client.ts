@@ -72,5 +72,5 @@ export function buildStyle(): string {
  *   3. 客户端反推 .md 路径：从 location.pathname 去掉 base、去掉 .html 后缀补 .md
  */
 export function buildClientScript(cfg: ClientRuntimeConfig): string {
-  return clientScriptSource.replace('__OPEN_IN_EDITOR_CONFIG__', JSON.stringify(cfg))
+  return `(${clientScriptSource})(${JSON.stringify(cfg)})`
 }
