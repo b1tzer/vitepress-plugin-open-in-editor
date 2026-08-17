@@ -19,8 +19,6 @@ Zero-config for VS Code. Supports Cursor / Windsurf / WebStorm / IntelliJ IDEA /
 
 ```bash
 npm i -D vitepress-plugin-open-in-editor
-# or during local development in this monorepo:
-npm i -D file:./packages/vitepress-plugin
 ```
 
 ## Prerequisites
@@ -43,7 +41,6 @@ import { withOpenInEditor } from 'vitepress-plugin-open-in-editor'
 export default withOpenInEditor(
   defineConfig({
     base: '/my-site/', // must match VitePress `base`
-    srcDir: './docs',  // optional: the plugin aligns with it automatically
     // ...your existing config, unchanged
   }),
   // The second argument is optional. The plugin auto-detects the VitePress root
@@ -162,11 +159,6 @@ Make sure the corresponding CLI is on your `$PATH`.
 
 ## Development
 
-This repo is an [npm workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces) monorepo with two packages:
-
-- `packages/open-in-editor-core` — framework-agnostic editor detection & argument building (published as `open-in-editor-core`)
-- `packages/vitepress-plugin` — the VitePress plugin (published as `vitepress-plugin-open-in-editor`), depends on `open-in-editor-core`
-
 This repo ships a local VitePress playground for quickly verifying plugin changes:
 
 ```bash
@@ -176,7 +168,7 @@ npm run demo:build   # static build of the playground
 npm run demo:preview # preview the built playground
 ```
 
-The playground at `docs/` imports the plugin source directly from `packages/vitepress-plugin/src/` via a relative import in `docs/.vitepress/config.mts`, so edits to `packages/vitepress-plugin/src/` are reflected immediately without rebuilding the package.
+The playground at `docs/` imports the plugin source directly from `src/` via a relative import in `docs/.vitepress/config.mts`, so edits to `src/` are reflected immediately without rebuilding the package.
 
 ## Caveats
 

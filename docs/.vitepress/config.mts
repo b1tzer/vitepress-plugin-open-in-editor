@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitepress'
-import { withOpenInEditor } from '../../packages/vitepress-plugin/src/index'
+import { withOpenInEditor } from '../../src/index'
 
 export default withOpenInEditor(
   defineConfig({

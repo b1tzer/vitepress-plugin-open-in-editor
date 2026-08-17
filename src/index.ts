@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { registerOpenEditorMiddleware } from './server'
 import { injectSourceLine } from './markdown'
 import { buildClientScript, buildStyle } from './client'
-import type { EditorId } from 'open-in-editor-core'
+import type { EditorId } from './launcher'
 import type MarkdownIt from 'markdown-it'
 
 export type { EditorId }

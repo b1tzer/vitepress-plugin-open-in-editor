@@ -26,4 +26,4 @@ jobs:
 
       - run: npm run build:types
 
-      - run: npm publish --workspaces
+      - run: npm publish
