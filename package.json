@@ -51,6 +51,7 @@
     "vitepress": ">=1"
   },
   "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^26.2.0",
     "esbuild": "^0.25.0",
     "typescript": "^5.7.0",

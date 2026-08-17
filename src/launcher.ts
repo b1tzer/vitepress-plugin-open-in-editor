@@ -38,7 +38,7 @@ export type EditorId =
   | 'nvim'
   | 'emacs'
 
-interface EditorSpec {
+export interface EditorSpec {
   /** 命令行可执行名（要能在 PATH 中找到） */
   cmd: string
   /** 组装 argv 的方式。line=0 表示不带行号。 */
@@ -220,8 +220,8 @@ function normalizeEditor(candidate: string): EditorId {
   return 'code'
 }
 
-export function resolveEditor(explicit?: string): EditorId {
-  if (explicit) return normalizeEditor(explicit)
+export function resolveEditor(explicit?: EditorId): EditorId {
+  if (explicit) return explicit
   if (process.env.LAUNCH_EDITOR) return normalizeEditor(process.env.LAUNCH_EDITOR)
 
   // 终端环境识别：精确判断当前 IDE 终端（VS Code / JetBrains / Remote SSH）。

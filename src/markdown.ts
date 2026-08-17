@@ -10,35 +10,14 @@
  *   - 改写 renderToken 只在真正渲染标签的那一刻注入，开销与原本渲染完全一致
  */
 
-// markdown-it 没有直接暴露类型；这里用宽松签名，保证在使用方 config.mts 里能无摩擦接入。
-type MarkdownIt = {
-  renderer: {
-    rules: Record<string, unknown>
-    renderToken: (tokens: unknown[], idx: number, options: unknown) => string
-  }
-}
+import type MarkdownIt from 'markdown-it'
 
 export function injectSourceLine(md: MarkdownIt): void {
   const original = md.renderer.renderToken.bind(md.renderer)
-  md.renderer.renderToken = function (
-    tokens: unknown[],
-    idx: number,
-    options: unknown,
-  ) {
-    const token = tokens[idx] as {
-      nesting: number
-      map?: number[] | null
-      tag?: string
-      attrJoin?: (name: string, value: string) => void
-    }
-    if (
-      token &&
-      token.nesting === 1 &&
-      token.map &&
-      token.map.length >= 1 &&
-      token.tag &&
-      typeof token.attrJoin === 'function'
-    ) {
+  md.renderer.renderToken = (tokens, idx, options) => {
+    const token = tokens[idx]
+    // 只处理开标签（nesting === 1）且带源码行号映射（map）的块级元素。
+    if (token.nesting === 1 && token.map && token.tag) {
       token.attrJoin('data-src-line', String(token.map[0] + 1))
     }
     return original(tokens, idx, options)
