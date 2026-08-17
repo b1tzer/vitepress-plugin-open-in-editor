@@ -1,19 +1,8 @@
 export default `(function(cfg) {
-  var BASE = cfg.base;
   var ENDPOINT = cfg.endpoint;
   var MARKER = cfg.markerProtocol;
   var BUTTON_TEXT = cfg.buttonText;
   var HOVER = cfg.hover;
-
-  // ---------- 通用：反推当前页对应的 .md 相对路径 ----------
-  function getSourceFile() {
-    var pathname = location.pathname;
-    if (pathname.indexOf(BASE) !== 0) return '';
-    var rel = pathname.slice(BASE.length); // e.g. 04-java-network/chapter-03-socket.html
-    if (/\\.html$/.test(rel)) rel = rel.slice(0, -5);
-    else if (rel === '' || /\\/$/.test(rel)) rel += 'index';
-    return rel + '.md';
-  }
 
   // ---------- 通用：发起打开请求 ----------
   function openInEditor(file, line) {
@@ -64,7 +53,7 @@ export default `(function(cfg) {
       e.stopPropagation();
       if (!currentTarget) return;
       var line = parseInt(currentTarget.getAttribute('data-src-line') || '0', 10);
-      var file = currentTarget.getAttribute('data-src-file') || getSourceFile();
+      var file = currentTarget.getAttribute('data-src-file') || '';
       openInEditor(file, line);
     });
     document.body.appendChild(btn);
