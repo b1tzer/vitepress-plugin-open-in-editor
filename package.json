@@ -21,6 +21,9 @@
     "build": "esbuild src/index.ts --bundle --format=esm --platform=node --packages=external --outfile=dist/index.mjs",
     "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist --noEmit false",
     "dev": "npm run build -- --watch",
+    "demo:dev": "vitepress dev docs",
+    "demo:build": "vitepress build docs",
+    "demo:preview": "vitepress preview docs",
     "prepublishOnly": "npm run build && npm run build:types",
     "prepare": "npm run build"
   },
