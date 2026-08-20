@@ -50,14 +50,24 @@ export function buildStyle(): string {
     transition: opacity .12s ease, transform .12s ease;
     box-shadow: 0 2px 6px rgba(0,0,0,.06);
     user-select: none;
+    pointer-events: none;
   }
   .vp-open-editor-btn.is-visible {
     opacity: 1;
     transform: translateY(0);
+    pointer-events: auto;
   }
   .vp-open-editor-btn:hover {
     color: var(--vp-c-brand-1, #3451b2);
     border-color: var(--vp-c-brand-1, #3451b2);
+  }
+  .vp-open-editor-bridge {
+    position: absolute;
+    z-index: 39;
+    pointer-events: none;
+  }
+  .vp-open-editor-bridge.is-visible {
+    pointer-events: auto;
   }`
 }
 
@@ -68,7 +78,8 @@ export function buildStyle(): string {
  *   1. 拦截 editLink：identify href.startsWith(markerProtocol) 的 <a>，阻止 SPA 路由，
  *      改为 fetch(endpoint?file=...) 打开整页源文件
  *   2. 悬浮浮动按钮：对 .vp-doc 里带 data-src-line 的元素挂 mouseover 委托，
- *      鼠标进入即在元素右上角显示"编辑此行"按钮，点击 fetch(endpoint?file=...&line=...)
+ *      鼠标进入即在正文右侧留白（窄屏则元素上方）显示"编辑此行"按钮，不遮挡正文，
+ *      点击 fetch(endpoint?file=...&line=...)
  *   3. 客户端反推 .md 路径：从 location.pathname 去掉 base、去掉 .html 后缀补 .md
  */
 export function buildClientScript(cfg: ClientRuntimeConfig): string {

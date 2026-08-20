@@ -35,8 +35,10 @@ export default `(function(cfg) {
 
   // ---------- 2. 悬浮浮动按钮 ----------
   var btn = null;
+  var bridge = null;
   var currentTarget = null;
   var hideTimer = null;
+  var GAP = 8; // 按钮与正文之间的间距（gutter 或元素上方）
 
   function ensureBtn() {
     if (btn) return btn;
@@ -60,24 +62,80 @@ export default `(function(cfg) {
     return btn;
   }
 
+  // 不可见的「桥接热区」：覆盖元素与按钮之间的空隙，让鼠标能顺畅滑入按钮，
+  // 不会因跨越空隙触发 mouseout 而让按钮提前消失。它只覆盖空隙、不压住正文。
+  function ensureBridge() {
+    if (bridge) return bridge;
+    bridge = document.createElement('div');
+    bridge.className = 'vp-open-editor-bridge';
+    bridge.setAttribute('aria-hidden', 'true');
+    bridge.addEventListener('mouseenter', function() {
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    });
+    bridge.addEventListener('mouseleave', scheduleHide);
+    document.body.appendChild(bridge);
+    return bridge;
+  }
+
   function positionBtn(target) {
     var b = ensureBtn();
     var r = target.getBoundingClientRect();
-    var top = window.scrollY + r.top - 6;
-    var left = window.scrollX + r.right - 90;
-    if (left < window.scrollX + r.left + 8) left = window.scrollX + r.left + 8;
-    b.style.top = top + 'px';
-    b.style.left = left + 'px';
+    var bw = b.offsetWidth || 80;
+    var bh = b.offsetHeight || 24;
+    var vw = document.documentElement.clientWidth;
+    var top, left, inGutter;
+
+    // 优先把按钮放进正文右侧的留白 gutter，完全不遮挡文字；
+    // 窄屏没有 gutter 时回退到元素「外侧上方」，右缘对齐。
+    if (r.right + GAP + bw <= vw) {
+      inGutter = true;
+      left = r.right + GAP;
+      top = r.top;
+    } else {
+      inGutter = false;
+      left = r.right - bw;
+      if (left < 0) left = 0;
+      top = r.top - bh - GAP;
+    }
+
+    b.style.top = (window.scrollY + top) + 'px';
+    b.style.left = (window.scrollX + left) + 'px';
+
+    positionBridge(r, left, top, bw, bh, inGutter);
+
     var line = target.getAttribute('data-src-line') || '';
     b.title = 'Open source line ' + line + ' in editor';
     b.setAttribute('data-line', line);
     b.classList.add('is-visible');
   }
 
+  function positionBridge(r, left, top, bw, bh, inGutter) {
+    var g = ensureBridge();
+    var PAD = 4;
+    var x, y, w, h;
+    if (inGutter) {
+      x = r.right - PAD;
+      y = r.top - PAD;
+      w = (left - r.right) + PAD * 2;
+      h = bh + PAD * 2;
+    } else {
+      x = left - PAD;
+      y = top + bh - PAD;
+      w = bw + PAD * 2;
+      h = (r.top - (top + bh)) + PAD * 2;
+    }
+    g.style.left = (window.scrollX + x) + 'px';
+    g.style.top = (window.scrollY + y) + 'px';
+    g.style.width = w + 'px';
+    g.style.height = h + 'px';
+    g.classList.add('is-visible');
+  }
+
   function scheduleHide() {
     if (hideTimer) clearTimeout(hideTimer);
     hideTimer = setTimeout(function() {
       if (btn) btn.classList.remove('is-visible');
+      if (bridge) bridge.classList.remove('is-visible');
       currentTarget = null;
     }, 150);
   }
@@ -98,6 +156,7 @@ export default `(function(cfg) {
     if (!currentTarget) return;
     var related = e.relatedTarget;
     if (related && (related === btn || (btn && btn.contains(related)))) return;
+    if (related && (related === bridge || (bridge && bridge.contains(related)))) return;
     if (related && currentTarget.contains(related)) return;
     scheduleHide();
   });
